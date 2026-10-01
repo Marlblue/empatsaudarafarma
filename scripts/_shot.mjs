@@ -1,0 +1,12 @@
+import { chromium } from "playwright-core";
+const [url, out, w = "1400"] = process.argv.slice(2);
+const b = await chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" });
+const p = await b.newPage({ viewport: { width: +w, height: 900 } });
+await p.goto(url, { waitUntil: "networkidle", timeout: 90000 }).catch(() => {});
+await p.waitForTimeout(2000);
+await p.screenshot({ path: out });
+const imgs = await p.$$eval(".flickity-slider img, .slider img, .banner img, [class*=slide] img, .bg", (els) => els.map((e) => (e.currentSrc || e.src || getComputedStyle(e).backgroundImage) + " " + e.clientWidth + "x" + e.clientHeight));
+console.log([...new Set(imgs)].slice(0, 30).join("\n"));
+const html = await p.$eval(".slider-wrapper, .slider, [class*=slider]", (e) => e.outerHTML.slice(0, 4000)).catch(() => "no slider");
+console.log(html);
+await b.close();

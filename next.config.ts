@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    serverActions: {
+      // Upload gambar produk & bukti transfer lewat Server Actions
+      bodySizeLimit: "20mb",
+    },
+  },
 };
 
 export default nextConfig;
