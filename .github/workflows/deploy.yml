@@ -44,6 +44,7 @@ jobs:
 
       # lftp: 10 file paralel. Urutan: aset statis baru dulu (aditif, halaman lama tetap jalan),
       # lalu kode server, terakhir tmp/restart.txt agar Passenger memuat versi baru sekaligus.
+      # node_modules (~60% file) hanya di-upload bila isinya berubah: sidik jarinya disimpan di server.
       - name: Upload ke cPanel
         if: github.event_name != 'pull_request' && env.FTP_SERVER != ''
         env:
@@ -53,17 +54,29 @@ jobs:
         working-directory: deploy/app
         run: |
           sudo apt-get update -qq > /dev/null && sudo apt-get install -y -qq lftp > /dev/null
-          LFTP_PASSWORD="$FTP_PASSWORD" lftp --env-password -u "$FTP_USERNAME" "$FTP_SERVER" <<EOF
+          export LFTP_PASSWORD="$FTP_PASSWORD"
+          DIR="${FTP_SERVER_DIR:-./}"
+          NM_HASH=$(cd node_modules && find . -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
+          echo "$NM_HASH" > .node_modules.sha256
+          REMOTE_HASH=$(lftp --env-password -u "$FTP_USERNAME" "$FTP_SERVER" \
+            -e "set ftp:ssl-force true; set ssl:verify-certificate no; set net:max-retries 2; set net:timeout 20; cat \"$DIR/.node_modules.sha256\"; bye" 2>/dev/null || true)
+          if [ "$NM_HASH" = "$REMOTE_HASH" ]; then
+            echo "node_modules tidak berubah, dilewati"
+            NM_CMD="echo node_modules dilewati"
+          else
+            NM_CMD="mirror -R --parallel=10 node_modules node_modules"
+          fi
+          lftp --env-password -u "$FTP_USERNAME" "$FTP_SERVER" <<EOF
           set ftp:ssl-force true
           set ftp:ssl-protect-data true
           set ssl:verify-certificate no
           set net:max-retries 3
           set net:timeout 30
           set cmd:fail-exit true
-          cd "${FTP_SERVER_DIR:-./}"
+          cd "$DIR"
           mirror -R --parallel=10 .next/static .next/static
           mirror -R --parallel=10 public public
-          mirror -R --parallel=10 node_modules node_modules
+          $NM_CMD
           mirror -R --parallel=10 -x '^\.next/static/' -x '^public/' -x '^node_modules/' -x '^tmp/' . .
           mkdir -pf tmp
           put -O tmp tmp/restart.txt
