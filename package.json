@@ -13,7 +13,9 @@
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
     "import:amanfarma": "tsx scripts/import-amanfarma.ts && node scripts/replace-watermark.mjs",
-    "watermark": "node scripts/replace-watermark.mjs"
+    "watermark": "node scripts/replace-watermark.mjs",
+    "deploy:pack": "node scripts/build-deploy.mjs",
+    "db:export": "node scripts/export-sql.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",
