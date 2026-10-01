@@ -1,11 +1,11 @@
-# Build Next.js (standalone) lalu upload ke cPanel lewat FTPS setiap ada push ke main.
+# Build Next.js (standalone) lalu upload ke cPanel lewat FTPS (lftp) setiap ada push ke main.
 # Pull request hanya di-build (cek tidak rusak), tidak di-deploy.
 #
 # Secrets repo (Settings → Secrets and variables → Actions):
 #   FTP_SERVER      mis. empatsaudarafarma.com
 #   FTP_USERNAME    akun FTP cPanel
 #   FTP_PASSWORD
-#   FTP_SERVER_DIR  folder aplikasi relatif dari root akun FTP, diakhiri "/" (mis. empatsaudarafarma/)
+#   FTP_SERVER_DIR  folder aplikasi relatif dari root akun FTP (./ bila akun FTP langsung ke folder aplikasi)
 name: Deploy
 
 on:
@@ -42,17 +42,30 @@ jobs:
 
       - run: node scripts/build-deploy.mjs --no-zip
 
+      # lftp: 10 file paralel. Urutan: aset statis baru dulu (aditif, halaman lama tetap jalan),
+      # lalu kode server, terakhir tmp/restart.txt agar Passenger memuat versi baru sekaligus.
       - name: Upload ke cPanel
         if: github.event_name != 'pull_request' && env.FTP_SERVER != ''
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps
-          local-dir: deploy/app/
-          server-dir: ${{ secrets.FTP_SERVER_DIR }}
-          # Default action ini melewati node_modules, padahal build standalone membutuhkannya
-          exclude: |
-            **/.git*
-            **/.git*/**
+        env:
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_SERVER_DIR: ${{ secrets.FTP_SERVER_DIR }}
+        working-directory: deploy/app
+        run: |
+          sudo apt-get update -qq > /dev/null && sudo apt-get install -y -qq lftp > /dev/null
+          LFTP_PASSWORD="$FTP_PASSWORD" lftp --env-password -u "$FTP_USERNAME" "$FTP_SERVER" <<EOF
+          set ftp:ssl-force true
+          set ftp:ssl-protect-data true
+          set ssl:verify-certificate no
+          set net:max-retries 3
+          set net:timeout 30
+          set cmd:fail-exit true
+          cd "${FTP_SERVER_DIR:-./}"
+          mirror -R --parallel=10 .next/static .next/static
+          mirror -R --parallel=10 public public
+          mirror -R --parallel=10 node_modules node_modules
+          mirror -R --parallel=10 -x '^\.next/static/' -x '^public/' -x '^node_modules/' -x '^tmp/' . .
+          mkdir -pf tmp
+          put -O tmp tmp/restart.txt
+          bye
+          EOF

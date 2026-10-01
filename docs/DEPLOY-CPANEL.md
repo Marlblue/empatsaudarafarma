@@ -62,11 +62,11 @@ Bila ada migrasi baru di `prisma/migrations`, jalankan SQL migrasi tersebut lewa
 
 ## Auto-deploy dari GitHub (push ke `main`)
 
-Workflow [.github/workflows/deploy.yml](../.github/workflows/deploy.yml) mem-build aplikasi di GitHub Actions lalu meng-upload `deploy/app/` ke server lewat FTPS. Pull request hanya di-build untuk memastikan tidak rusak.
+Workflow [.github/workflows/deploy.yml](../.github/workflows/deploy.yml) mem-build aplikasi di GitHub Actions lalu meng-upload `deploy/app/` ke server lewat FTPS (lftp, 10 file paralel; aset statis dulu, restart terakhir). Pull request hanya di-build untuk memastikan tidak rusak.
 
 Sekali saja:
 
-1. cPanel → **FTP Accounts** → buat akun, mis. `deploy`, dengan **Directory** `/home/empatsau` (bukan `public_html`).
+1. cPanel → **FTP Accounts** → buat akun, mis. `deploy`, dengan **Directory** `/home/empatsau/empatsaudarafarma` (hanya folder aplikasi).
 2. GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**:
 
    | Secret | Nilai |
@@ -74,7 +74,7 @@ Sekali saja:
    | `FTP_SERVER` | `empatsaudarafarma.com` |
    | `FTP_USERNAME` | `deploy@empatsaudarafarma.com` |
    | `FTP_PASSWORD` | password akun FTP |
-   | `FTP_SERVER_DIR` | `empatsaudarafarma/` |
+   | `FTP_SERVER_DIR` | `./` |
 
 Alur kerja: buat branch → push → buka Pull Request (Actions mengecek build) → merge ke `main` → otomatis ter-deploy dan aplikasi restart sendiri (`tmp/restart.txt`).
 
