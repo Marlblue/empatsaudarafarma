@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useActionState, useEffect, useState } from "react";
+import { toWebp } from "@/lib/webp";
 import { saveProduct, type ProductFormState } from "@/app/admin/actions/products";
 
 export type ProductFormData = {
@@ -43,6 +44,7 @@ export function ProductForm({ product, categories }: { product?: ProductFormData
   );
   const [images, setImages] = useState(product?.images ?? []);
   const [newFiles, setNewFiles] = useState<{ file: File; preview: string }[]>([]);
+  const [converting, setConverting] = useState(false);
   const err = (k: string) => state?.fieldErrors?.[k]?.[0];
 
   useEffect(() => () => newFiles.forEach((f) => URL.revokeObjectURL(f.preview)), [newFiles]);
@@ -83,7 +85,9 @@ export function ProductForm({ product, categories }: { product?: ProductFormData
         </Section>
 
         <Section title="Gambar Produk">
-          <p className="text-xs text-gray-500">Gambar pertama menjadi gambar utama. JPG/PNG/WebP, maks. 5 MB per file.</p>
+          <p className="text-xs text-gray-500">
+            Gambar pertama menjadi gambar utama. JPG/PNG/WebP; otomatis diubah ke WebP dan diperkecil agar halaman cepat dibuka.
+          </p>
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
             {images.map((img, i) => (
               <div key={img.id} className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
@@ -114,17 +118,21 @@ export function ProductForm({ product, categories }: { product?: ProductFormData
               </div>
             ))}
             <label className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-center text-xs text-gray-500 hover:border-brand-500 hover:text-brand-700">
-              <span className="text-2xl">+</span>
-              Tambah gambar
+              <span className="text-2xl">{converting ? "…" : "+"}</span>
+              {converting ? "Memproses gambar" : "Tambah gambar"}
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 multiple
                 className="sr-only"
-                onChange={(e) => {
+                disabled={converting}
+                onChange={async (e) => {
                   const files = [...(e.target.files ?? [])];
-                  setNewFiles((l) => [...l, ...files.map((file) => ({ file, preview: URL.createObjectURL(file) }))]);
                   e.target.value = "";
+                  setConverting(true);
+                  const converted = await Promise.all(files.map((file) => toWebp(file)));
+                  setConverting(false);
+                  setNewFiles((l) => [...l, ...converted.map((file) => ({ file, preview: URL.createObjectURL(file) }))]);
                 }}
               />
             </label>
@@ -165,7 +173,7 @@ export function ProductForm({ product, categories }: { product?: ProductFormData
           <Check name="requiresPrescription" label="Obat keras (wajib resep dokter)" defaultChecked={product?.requiresPrescription} />
           {state?.error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{state.error}</p>}
           {state?.fieldErrors && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">Periksa kembali isian yang ditandai.</p>}
-          <button disabled={pending} className="btn-primary w-full">
+          <button disabled={pending || converting} className="btn-primary w-full">
             {pending ? "Menyimpan..." : "Simpan Produk"}
           </button>
         </Section>
