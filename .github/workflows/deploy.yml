@@ -46,6 +46,7 @@ jobs:
       # melayani. Setelah selesai, RELEASE menunjuk ke rilis baru, server.js (peluncur) dipasang, lalu
       # tmp/restart.txt memicu Passenger memuat rilis baru sekaligus. 3 rilis terbaru disimpan untuk rollback.
       # node_modules dipakai bersama di folder aplikasi dan hanya diunggah bila isinya berubah.
+      # --dereference: server FTP tidak mendukung symlink, jadi isi file tujuannya yang diunggah.
       - name: Upload ke cPanel
         if: github.event_name != 'pull_request' && env.FTP_SERVER != ''
         env:
@@ -71,7 +72,7 @@ jobs:
             echo "node_modules tidak berubah, dilewati"
             NM_CMD="echo node_modules dilewati"
           else
-            NM_CMD="mirror -R --parallel=10 node_modules node_modules; put ../node_modules.sha256 -o .node_modules.sha256"
+            NM_CMD="mirror -R --dereference --parallel=10 node_modules node_modules; put ../node_modules.sha256 -o .node_modules.sha256"
           fi
 
           lftp --env-password -u "$FTP_USERNAME" "$FTP_SERVER" <<EOF
@@ -84,8 +85,8 @@ jobs:
           cd "$DIR"
           $NM_CMD
           mkdir -pf releases
-          mirror -R --parallel=10 -x '^node_modules/' -x '^tmp/' . releases/$REL
-          mirror -R --parallel=10 public public
+          mirror -R --dereference --parallel=10 -x '^node_modules/' -x '^tmp/' . releases/$REL
+          mirror -R --dereference --parallel=10 public public
           put ../RELEASE -o RELEASE
           put ../../scripts/passenger-server.cjs -o server.js
           mkdir -pf tmp
