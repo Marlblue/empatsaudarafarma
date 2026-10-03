@@ -204,6 +204,22 @@ export default async function AdminOrderDetailPage({ params, searchParams }: Pag
               <form action={saveShipping.bind(null, order.id)} className="space-y-3">
                 <input name="courier" defaultValue={order.courier ?? ""} placeholder="Kurir (mis. JNE REG)" className="input" required />
                 <input name="trackingNumber" defaultValue={order.trackingNumber ?? ""} placeholder="No. resi" className="input" required />
+                {order.trackingImage && (
+                  <a href={order.trackingImage} target="_blank" rel="noopener" className="block">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- ukuran foto resi tidak diketahui */}
+                    <img src={order.trackingImage} alt="Foto resi" className="max-h-48 rounded-lg border border-gray-200" />
+                  </a>
+                )}
+                <label className="block">
+                  <span className="label">{order.trackingImage ? "Ganti foto resi" : "Foto resi (opsional)"}</span>
+                  <input
+                    name="trackingImage"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-semibold file:text-brand-700"
+                  />
+                  <span className="mt-1 block text-xs text-gray-500">JPG, PNG, atau WEBP, maks. 5 MB. Bisa dilihat pembeli di halaman pesanannya.</span>
+                </label>
                 <SubmitButton className="btn-primary w-full">
                   {order.status === "PROCESSING" ? "Simpan & Tandai Dikirim" : "Simpan Resi"}
                 </SubmitButton>

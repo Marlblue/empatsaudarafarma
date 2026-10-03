@@ -4,8 +4,9 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { isStaff, requireUser } from "@/lib/auth";
 import { formatDateTime, formatRupiah, waLink } from "@/lib/format";
-import { ORDER_STATUS_COLOR, ORDER_STATUS_LABEL } from "@/lib/order-status";
+import { canCustomerCancel, ORDER_STATUS_COLOR, ORDER_STATUS_LABEL } from "@/lib/order-status";
 import { getSettings } from "@/lib/settings";
+import { CancelOrderForm } from "./cancel-form";
 import { ConfirmPaymentForm } from "./confirm-form";
 
 export const metadata: Metadata = { title: "Detail Pesanan", robots: { index: false } };
@@ -20,6 +21,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
       include: {
         items: { include: { product: { select: { slug: true } } } },
         paymentConfirmations: { orderBy: { createdAt: "desc" }, take: 1 },
+        statusLogs: { where: { toStatus: "CANCELLED" }, orderBy: { createdAt: "desc" }, take: 1 },
       },
     }),
     getSettings(),
@@ -103,10 +105,25 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
         </p>
       )}
 
-      {order.trackingNumber && (
-        <p className="mb-6 rounded-lg bg-indigo-50 p-4 text-sm text-indigo-800">
-          Dikirim via <strong>{order.courier}</strong> dengan no. resi <strong>{order.trackingNumber}</strong>
+      {order.status === "CANCELLED" && (
+        <p className="mb-6 rounded-lg bg-gray-100 p-4 text-sm text-gray-700">
+          Pesanan ini telah dibatalkan{order.statusLogs[0]?.note && <>: {order.statusLogs[0].note}</>}.
         </p>
+      )}
+
+      {order.trackingNumber && (
+        <div className="mb-6 rounded-lg bg-indigo-50 p-4 text-sm text-indigo-800">
+          <p>
+            Dikirim via <strong>{order.courier}</strong> dengan no. resi <strong>{order.trackingNumber}</strong>
+          </p>
+          {order.trackingImage && (
+            <a href={order.trackingImage} target="_blank" rel="noopener" className="mt-3 inline-block">
+              {/* eslint-disable-next-line @next/next/no-img-element -- ukuran foto resi tidak diketahui */}
+              <img src={order.trackingImage} alt={`Foto resi ${order.trackingNumber}`} className="max-h-64 rounded-lg border border-indigo-100 bg-white" />
+              <span className="mt-1 block text-xs font-semibold hover:underline">Lihat foto resi ukuran penuh ↗</span>
+            </a>
+          )}
+        </div>
       )}
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -155,7 +172,10 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/pe
         </dl>
       </section>
 
-      <div className="mt-6 flex gap-3">
+      <div className="mt-6 flex flex-wrap gap-3">
+        {order.userId === user.id && canCustomerCancel(order) && (
+          <CancelOrderForm code={order.code} paid={order.status === "PENDING_VERIFICATION"} />
+        )}
         <Link href="/akun/pesanan" className="btn-outline">Semua Pesanan Saya</Link>
         <Link href="/shop" className="btn-outline">Lanjut Belanja</Link>
       </div>

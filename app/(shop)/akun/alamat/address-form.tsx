@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { saveAddress, type AccountState } from "@/app/actions/account";
 import { PROVINCES } from "@/lib/shipping";
+import { CityField } from "@/components/shop/city-field";
 
 type Address = {
   id: string;
@@ -22,6 +23,8 @@ export function AddressForm({ address }: { address?: Address }) {
     saveAddress.bind(null, address?.id ?? null),
     null,
   );
+  const [province, setProvince] = useState(address?.province ?? "");
+  const [city, setCity] = useState(address?.city ?? "");
   const err = (k: string) => state?.fieldErrors?.[k]?.[0];
   const field = (name: keyof Address, label: string, props: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
     <label className="block">
@@ -39,7 +42,16 @@ export function AddressForm({ address }: { address?: Address }) {
         {field("phone", "No. HP", { type: "tel" })}
         <label className="block">
           <span className="label">Provinsi</span>
-          <select name="province" defaultValue={address?.province ?? ""} required className="input">
+          <select
+            name="province"
+            value={province}
+            onChange={(e) => {
+              setProvince(e.target.value);
+              setCity("");
+            }}
+            required
+            className="input"
+          >
             <option value="">Pilih provinsi</option>
             {PROVINCES.map((p) => (
               <option key={p}>{p}</option>
@@ -47,7 +59,11 @@ export function AddressForm({ address }: { address?: Address }) {
           </select>
           {err("province") && <span className="mt-1 block text-xs text-red-600">{err("province")}</span>}
         </label>
-        {field("city", "Kota / Kabupaten")}
+        <label className="block">
+          <span className="label">Kota / Kabupaten</span>
+          <CityField province={province} value={city} onChange={setCity} />
+          {err("city") && <span className="mt-1 block text-xs text-red-600">{err("city")}</span>}
+        </label>
         {field("district", "Kecamatan")}
         {field("postalCode", "Kode pos", { inputMode: "numeric", maxLength: 5 })}
       </div>

@@ -3,7 +3,8 @@
 import { useActionState, useState } from "react";
 import { placeOrder, type CheckoutState } from "@/app/actions/checkout";
 import { formatRupiah } from "@/lib/format";
-import { calculateShipping, PROVINCES, type ShippingConfig } from "@/lib/shipping";
+import { calculateShipping, CITIES_BY_PROVINCE, PROVINCES, type ShippingConfig } from "@/lib/shipping";
+import { CityField } from "@/components/shop/city-field";
 
 type Address = {
   id: string;
@@ -66,7 +67,9 @@ export function CheckoutForm({
   const set = (k: keyof Fields) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setFields((f) => ({ ...f, [k]: e.target.value }));
 
-  const shippingCost = fields.province ? calculateShipping(fields.province, subtotal, shipping) : null;
+  // Di provinsi sekitar Jabodetabek, ongkir baru bisa dihitung setelah kota dipilih
+  const addressReady = fields.province !== "" && (!CITIES_BY_PROVINCE[fields.province] || fields.city !== "");
+  const shippingCost = addressReady ? calculateShipping(fields.province, fields.city, subtotal, shipping) : null;
   const err = (k: string) => state?.fieldErrors?.[k]?.[0];
 
   return (
@@ -102,7 +105,13 @@ export function CheckoutForm({
               <input name="phone" type="tel" value={fields.phone} onChange={set("phone")} required className="input" />
             </Field>
             <Field label="Provinsi" error={err("province")}>
-              <select name="province" value={fields.province} onChange={set("province")} required className="input">
+              <select
+                name="province"
+                value={fields.province}
+                onChange={(e) => setFields((f) => ({ ...f, province: e.target.value, city: "" }))}
+                required
+                className="input"
+              >
                 <option value="">Pilih provinsi</option>
                 {PROVINCES.map((p) => (
                   <option key={p}>{p}</option>
@@ -110,7 +119,7 @@ export function CheckoutForm({
               </select>
             </Field>
             <Field label="Kota / Kabupaten" error={err("city")}>
-              <input name="city" value={fields.city} onChange={set("city")} required className="input" />
+              <CityField province={fields.province} value={fields.city} onChange={(city) => setFields((f) => ({ ...f, city }))} />
             </Field>
             <Field label="Kecamatan" error={err("district")}>
               <input name="district" value={fields.district} onChange={set("district")} required className="input" />
@@ -173,7 +182,7 @@ export function CheckoutForm({
           <div className="flex justify-between">
             <span className="text-gray-600">Ongkos kirim</span>
             <span>
-              {shippingCost === null ? "Pilih provinsi" : shippingCost === 0 ? "Gratis" : formatRupiah(shippingCost)}
+              {shippingCost === null ? "Pilih alamat" : shippingCost === 0 ? "Gratis" : formatRupiah(shippingCost)}
             </span>
           </div>
           <div className="flex justify-between border-t border-gray-100 pt-2 text-base font-bold">

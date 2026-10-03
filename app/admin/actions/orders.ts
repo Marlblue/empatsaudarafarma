@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireStaff } from "@/lib/auth";
 import { changeOrderStatus } from "@/lib/orders";
+import { deleteUpload, isUploadedFile, saveUpload } from "@/lib/storage";
 import { OrderStatus } from "@/generated/prisma/enums";
 
 function back(orderId: string, message: string, isError = false): never {
@@ -49,7 +50,19 @@ export async function saveShipping(orderId: string, formData: FormData) {
   const trackingNumber = String(formData.get("trackingNumber") ?? "").trim().slice(0, 100);
   if (!courier || !trackingNumber) back(orderId, "Isi kurir dan nomor resi", true);
 
-  const order = await db.order.update({ where: { id: orderId }, data: { courier, trackingNumber } });
+  // Foto resi opsional; foto baru menggantikan yang lama
+  const photo = formData.get("trackingImage");
+  let trackingImage: string | undefined;
+  if (isUploadedFile(photo)) {
+    try {
+      trackingImage = await saveUpload(photo, "shipping");
+    } catch (e) {
+      back(orderId, (e as Error).message, true);
+    }
+  }
+  const previous = await db.order.findUnique({ where: { id: orderId }, select: { trackingImage: true } });
+  const order = await db.order.update({ where: { id: orderId }, data: { courier, trackingNumber, trackingImage } });
+  if (trackingImage && previous?.trackingImage) await deleteUpload(previous.trackingImage);
   if (order.status === "PROCESSING") {
     await changeOrderStatus(orderId, "SHIPPED", user.id, `Dikirim via ${courier} (${trackingNumber})`);
   }
