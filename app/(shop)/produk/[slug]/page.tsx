@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser, isStaff } from "@/lib/auth";
 import { getProductBySlug, getRelatedProducts, isInStock } from "@/lib/catalog";
 import { formatDateTime, formatRupiah, waLink } from "@/lib/format";
+import { ADDRESS_REQUEST } from "@/lib/whatsapp";
 import { getSettings } from "@/lib/settings";
 import { AddToCartForm } from "@/components/add-to-cart";
 import { EnvelopeIcon, FacebookIcon, LinkedInIcon, PinterestIcon, TwitterIcon, WhatsAppIcon } from "@/components/icons";
@@ -70,7 +71,9 @@ export default async function ProductPage({ params }: PageProps<"/produk/[slug]"
     ["No. BPOM", product.bpomNumber],
   ].filter((row): row is [string, string] => Boolean(row[1]));
 
-  const waText = `Halo ${settings.storeName}, saya ingin memesan:\n\n${product.name}\nHarga: ${formatRupiah(product.price)}\n\n${productUrl}`;
+  const waText =
+    `Halo ${settings.storeName}, saya ingin memesan:\n\n${product.name}\nHarga: ${formatRupiah(product.price)} (belum termasuk ongkir)\n${productUrl}` +
+    `\n\nJumlah: \n\n${ADDRESS_REQUEST}`;
   const shareText = encodeURIComponent(product.name);
   const shareUrl = encodeURIComponent(productUrl);
   const shares = [
