@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { hashPassword, requireStaff } from "@/lib/auth";
 import { saveSettings, type StoreSettings } from "@/lib/settings";
+import { JABODETABEK, PROVINCES } from "@/lib/shipping";
 import { deleteUpload, isUploadedFile, saveUpload } from "@/lib/storage";
 
 function go(path: string, message: string, isError = false): never {
@@ -203,7 +204,9 @@ export async function saveShippingRate(formData: FormData) {
   await requireStaff({ adminOnly: true });
   const region = String(formData.get("region") ?? "").trim();
   const cost = Number(formData.get("cost"));
-  if (!region || !Number.isInteger(cost) || cost < 0) go("/admin/pengaturan", "Isi provinsi dan tarif yang valid", true);
+  if (!(region === JABODETABEK || PROVINCES.includes(region)) || !Number.isInteger(cost) || cost < 0) {
+    go("/admin/pengaturan", "Pilih wilayah dan isi tarif yang valid", true);
+  }
   await db.shippingRate.upsert({ where: { region }, create: { region, cost }, update: { cost } });
   go("/admin/pengaturan", `Tarif ${region} tersimpan`);
 }

@@ -27,3 +27,12 @@ export const NEXT_STATUSES: Record<OrderStatus, OrderStatus[]> = {
   COMPLETED: [],
   CANCELLED: [],
 };
+
+/**
+ * Pembeli boleh membatalkan sendiri selama pesanan belum diproses admin: transfer yang menunggu
+ * pembayaran/verifikasi, atau COD yang belum dikirim (COD langsung berstatus "Diproses" saat dibuat).
+ */
+export function canCustomerCancel(order: { status: OrderStatus; paymentMethod: "TRANSFER" | "COD"; trackingNumber: string | null }) {
+  if (order.status === "PENDING_PAYMENT" || order.status === "PENDING_VERIFICATION") return true;
+  return order.paymentMethod === "COD" && order.status === "PROCESSING" && !order.trackingNumber;
+}

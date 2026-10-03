@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { requireStaff } from "@/lib/auth";
 import { formatRupiah } from "@/lib/format";
 import { getSettings } from "@/lib/settings";
-import { PROVINCES } from "@/lib/shipping";
+import { JABODETABEK, PROVINCES } from "@/lib/shipping";
 import { Flash, PageHeader } from "@/components/admin/page-header";
 import { ConfirmButton, SubmitButton } from "@/components/admin/ui";
 
@@ -132,16 +132,20 @@ export default async function SettingsPage({ searchParams }: PageProps<"/admin/p
       </form>
 
       <section className="card mt-8 p-5">
-        <h2 className="mb-1 font-bold text-gray-900">Tarif Ongkir per Provinsi</h2>
+        <h2 className="mb-1 font-bold text-gray-900">Tarif Ongkir per Wilayah</h2>
         <p className="mb-4 text-sm text-gray-500">
-          Provinsi yang tidak diatur memakai ongkir flat ({formatRupiah(s.flatShippingCost)}).
+          Urutan tarif: <strong>Jabodetabek</strong> (Jakarta, Bogor, Depok, Tangerang, Tangerang Selatan, Bekasi) →
+          tarif provinsi → ongkir flat ({formatRupiah(s.flatShippingCost)}) untuk provinsi yang tidak diatur.
         </p>
         <form action={saveShippingRate} className="mb-4 flex flex-wrap gap-2">
           <select name="region" required className="input w-auto" defaultValue="">
-            <option value="" disabled>Pilih provinsi</option>
-            {PROVINCES.map((p) => (
-              <option key={p}>{p}</option>
-            ))}
+            <option value="" disabled>Pilih wilayah</option>
+            <option value={JABODETABEK}>{JABODETABEK} (Jakarta, Bogor, Depok, Tangerang, Bekasi)</option>
+            <optgroup label="Provinsi">
+              {PROVINCES.map((p) => (
+                <option key={p}>{p}</option>
+              ))}
+            </optgroup>
           </select>
           <input name="cost" type="number" min={0} required placeholder="Tarif (Rp)" className="input w-40" />
           <SubmitButton>Simpan Tarif</SubmitButton>

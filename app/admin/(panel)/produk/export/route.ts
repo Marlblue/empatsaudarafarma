@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   if (isTemplate) {
     rows = [
       [
-        "AF-0001", "Aminophylline Injeksi", "", 215000, "", 20, 1, 700, "Injeksi Perbox",
+        "ESF-0001", "Aminophylline Injeksi", "", 215000, "", 20, 1, 700, "Injeksi Perbox",
         "AMINOPHYLLINE", "AMINOPHYLLINE", "", "PHAPROS Tbk – Indonesia", "INJEKSI; 24 MG", "DUS, 30 AMPUL @ 10 ML", "PHAPROS Tbk – Indonesia", "",
         "Aminophylline injeksi isi 30 ampul", "Deskripsi lengkap produk", 1, 0, 0, "PUBLISHED", "",
       ],

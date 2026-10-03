@@ -201,6 +201,7 @@ model Order {
   note                  String?
   courier               String?
   trackingNumber        String?
+  trackingImage         String?
   internalNote          String?
   paymentDueAt          DateTime?
   createdAt             DateTime              @default(now())

@@ -8,6 +8,8 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { cartSummary, getCart } from "@/lib/cart";
 import { getSettings } from "@/lib/settings";
+import { canCustomerCancel } from "@/lib/order-status";
+import { changeOrderStatus } from "@/lib/orders";
 import { calculateShipping, PROVINCES } from "@/lib/shipping";
 import { isUploadedFile, saveUpload } from "@/lib/storage";
 
@@ -30,7 +32,7 @@ function orderCode() {
   const d = new Date(Date.now() + 7 * 3600_000); // WIB
   const date = d.toISOString().slice(0, 10).replace(/-/g, "");
   const rand = randomBytes(3).toString("hex").toUpperCase();
-  return `AF-${date}-${rand}`;
+  return `ESF-${date}-${rand}`;
 }
 
 class StockError extends Error {}
@@ -48,7 +50,7 @@ export async function placeOrder(_prev: CheckoutState, formData: FormData): Prom
     return { error: "Pembayaran COD sedang tidak tersedia." };
   }
 
-  const shippingCost = calculateShipping(data.province, subtotal, {
+  const shippingCost = calculateShipping(data.province, data.city, subtotal, {
     rates,
     flatShippingCost: settings.flatShippingCost,
     freeShippingMin: settings.freeShippingMin,
@@ -179,4 +181,28 @@ export async function confirmPayment(code: string, _prev: ConfirmState, formData
   ]);
   revalidatePath(`/pesanan/${code}`);
   return { ok: true, message: "Bukti transfer terkirim. Admin akan memverifikasi pembayaran Anda." };
+}
+
+export type CancelState = { ok: boolean; message: string } | null;
+
+export async function cancelOrder(code: string, _prev: CancelState, formData: FormData): Promise<CancelState> {
+  const user = await requireUser(`/pesanan/${code}`);
+  const order = await db.order.findUnique({ where: { code } });
+  if (!order || order.userId !== user.id) return { ok: false, message: "Pesanan tidak ditemukan." };
+  if (!canCustomerCancel(order)) {
+    return { ok: false, message: "Pesanan sudah diproses dan tidak bisa dibatalkan. Silakan hubungi CS kami." };
+  }
+
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 300);
+  const cancelled = await changeOrderStatus(
+    order.id,
+    "CANCELLED",
+    user.id,
+    reason ? `Dibatalkan oleh pembeli: ${reason}` : "Dibatalkan oleh pembeli",
+  );
+  if (!cancelled) return { ok: false, message: "Status pesanan baru saja berubah. Muat ulang halaman ini." };
+
+  revalidatePath(`/pesanan/${code}`);
+  revalidatePath("/akun/pesanan");
+  return { ok: true, message: "Pesanan berhasil dibatalkan." };
 }

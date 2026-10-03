@@ -5,6 +5,7 @@ import { requireStaff } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
 import { Flash, PageHeader } from "@/components/admin/page-header";
 import { SubmitButton } from "@/components/admin/ui";
+import { PasswordInput } from "@/components/password-input";
 
 export const metadata: Metadata = { title: "Pengguna Admin" };
 
@@ -35,7 +36,7 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/peng
               <option value="ADMIN">Admin</option>
             </select>
           </label>
-          <label className="block"><span className="label">Password awal</span><input name="password" type="password" minLength={8} required className="input" /></label>
+          <label className="block"><span className="label">Password awal</span><PasswordInput name="password" minLength={8} required autoComplete="new-password" /></label>
           <div><SubmitButton>Tambah</SubmitButton></div>
         </form>
       </details>
@@ -64,7 +65,7 @@ export default async function StaffPage({ searchParams }: PageProps<"/admin/peng
               </label>
               <label className="block">
                 <span className="label">Password baru (opsional)</span>
-                <input name="password" type="password" minLength={8} className="input" />
+                <PasswordInput name="password" minLength={8} autoComplete="new-password" />
               </label>
               <label className="flex items-center gap-2 self-end pb-2 text-sm">
                 <input type="checkbox" name="isActive" defaultChecked={u.isActive} className="h-4 w-4 accent-brand-600" />
