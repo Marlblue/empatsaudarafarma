@@ -3,6 +3,7 @@ import Link from "next/link";
 import { removeCartItem, updateCartItem } from "@/app/actions/cart";
 import { cartSummary, getCart } from "@/lib/cart";
 import { formatRupiah, waLink } from "@/lib/format";
+import { ADDRESS_REQUEST } from "@/lib/whatsapp";
 import { getSettings } from "@/lib/settings";
 import { ProductImage } from "@/components/product-image";
 
@@ -27,7 +28,7 @@ export default async function CartPage() {
   const waText =
     `Halo ${settings.storeName}, saya ingin memesan:\n\n` +
     items.map((i, n) => `${n + 1}. ${i.product.name} x${i.quantity} = ${formatRupiah(i.product.price * i.quantity)}`).join("\n") +
-    `\n\nTotal: ${formatRupiah(subtotal)}`;
+    `\n\nSubtotal: ${formatRupiah(subtotal)} (belum termasuk ongkir)\n\n${ADDRESS_REQUEST}`;
 
   return (
     <div className="container-page py-8">
