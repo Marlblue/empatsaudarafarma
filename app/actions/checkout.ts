@@ -32,7 +32,7 @@ function orderCode() {
   const d = new Date(Date.now() + 7 * 3600_000); // WIB
   const date = d.toISOString().slice(0, 10).replace(/-/g, "");
   const rand = randomBytes(3).toString("hex").toUpperCase();
-  return `AF-${date}-${rand}`;
+  return `ESF-${date}-${rand}`;
 }
 
 class StockError extends Error {}
