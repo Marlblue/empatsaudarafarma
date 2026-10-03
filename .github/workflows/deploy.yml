@@ -42,9 +42,10 @@ jobs:
 
       - run: node scripts/build-deploy.mjs --no-zip
 
-      # lftp: 10 file paralel. Urutan: aset statis baru dulu (aditif, halaman lama tetap jalan),
-      # lalu kode server, terakhir tmp/restart.txt agar Passenger memuat versi baru sekaligus.
-      # node_modules (~60% file) hanya di-upload bila isinya berubah: sidik jarinya disimpan di server.
+      # Tanpa downtime: tiap deploy diunggah utuh ke releases/<waktu>-<commit>/ selagi versi lama tetap
+      # melayani. Setelah selesai, RELEASE menunjuk ke rilis baru, server.js (peluncur) dipasang, lalu
+      # tmp/restart.txt memicu Passenger memuat rilis baru sekaligus. 3 rilis terbaru disimpan untuk rollback.
+      # node_modules dipakai bersama di folder aplikasi dan hanya diunggah bila isinya berubah.
       - name: Upload ke cPanel
         if: github.event_name != 'pull_request' && env.FTP_SERVER != ''
         env:
@@ -56,16 +57,23 @@ jobs:
           sudo apt-get update -qq > /dev/null && sudo apt-get install -y -qq lftp > /dev/null
           export LFTP_PASSWORD="$FTP_PASSWORD"
           DIR="${FTP_SERVER_DIR:-./}"
+          REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
+          echo "$REL" > ../RELEASE
+          ftp_cmd() {
+            lftp --env-password -u "$FTP_USERNAME" "$FTP_SERVER" \
+              -e "set ftp:ssl-force true; set ssl:verify-certificate no; set net:max-retries 2; set net:timeout 20; $1; bye"
+          }
+
           NM_HASH=$(cd node_modules && find . -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
-          echo "$NM_HASH" > .node_modules.sha256
-          REMOTE_HASH=$(lftp --env-password -u "$FTP_USERNAME" "$FTP_SERVER" \
-            -e "set ftp:ssl-force true; set ssl:verify-certificate no; set net:max-retries 2; set net:timeout 20; cat \"$DIR/.node_modules.sha256\"; bye" 2>/dev/null || true)
+          echo "$NM_HASH" > ../node_modules.sha256
+          REMOTE_HASH=$(ftp_cmd "cat \"$DIR/.node_modules.sha256\"" 2>/dev/null || true)
           if [ "$NM_HASH" = "$REMOTE_HASH" ]; then
             echo "node_modules tidak berubah, dilewati"
             NM_CMD="echo node_modules dilewati"
           else
-            NM_CMD="mirror -R --parallel=10 node_modules node_modules"
+            NM_CMD="mirror -R --parallel=10 node_modules node_modules; put ../node_modules.sha256 -o .node_modules.sha256"
           fi
+
           lftp --env-password -u "$FTP_USERNAME" "$FTP_SERVER" <<EOF
           set ftp:ssl-force true
           set ftp:ssl-protect-data true
@@ -74,11 +82,20 @@ jobs:
           set net:timeout 30
           set cmd:fail-exit true
           cd "$DIR"
-          mirror -R --parallel=10 .next/static .next/static
-          mirror -R --parallel=10 public public
           $NM_CMD
-          mirror -R --parallel=10 -x '^\.next/static/' -x '^public/' -x '^node_modules/' -x '^tmp/' . .
+          mkdir -pf releases
+          mirror -R --parallel=10 -x '^node_modules/' -x '^tmp/' . releases/$REL
+          mirror -R --parallel=10 public public
+          put ../RELEASE -o RELEASE
+          put ../../scripts/passenger-server.cjs -o server.js
           mkdir -pf tmp
           put -O tmp tmp/restart.txt
           bye
           EOF
+          echo "Rilis aktif: $REL"
+
+          # Bersihkan rilis lama (simpan 3 terbaru); website sudah memakai rilis baru
+          for old in $(ftp_cmd "cls -1 \"$DIR/releases/\"" | sed 's#/$##; s#.*/##' | sort | head -n -3); do
+            echo "Hapus rilis lama: $old"
+            ftp_cmd "rm -r \"$DIR/releases/$old\"" || true
+          done

@@ -78,6 +78,19 @@ Sekali saja:
 
 Alur kerja: buat branch → push → buka Pull Request (Actions mengecek build) → merge ke `main` → otomatis ter-deploy dan aplikasi restart sendiri (`tmp/restart.txt`).
 
+Susunan di server (tanpa downtime saat deploy):
+
+```
+empatsaudarafarma/
+  server.js          peluncur (scripts/passenger-server.cjs) → menjalankan releases/<RELEASE>/server.js
+  RELEASE            nama rilis aktif, mis. 20261003031046-ef03b97
+  releases/<rilis>/  hasil build Next.js per deploy (3 terbaru disimpan)
+  node_modules/      dipakai bersama semua rilis
+  public/            salinan aset publik untuk disajikan langsung oleh Passenger
+```
+
+**Rollback**: File Manager → `empatsaudarafarma/RELEASE` → Edit → ganti dengan nama folder rilis sebelumnya di `releases/` → simpan → ubah/isi ulang `tmp/restart.txt` (atau Restart di Setup Node.js App).
+
 Yang tetap manual:
 - Perubahan struktur database (migrasi baru di `prisma/migrations`): jalankan `migration.sql`-nya lewat phpPgAdmin **sebelum** merge.
 - Environment variable baru: tambahkan di Setup Node.js App.
