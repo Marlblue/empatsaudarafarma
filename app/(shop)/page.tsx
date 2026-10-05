@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
@@ -5,6 +6,19 @@ import { productCardSelect } from "@/lib/catalog";
 import { getSettings } from "@/lib/settings";
 import { CategoryMenu } from "@/components/shop/category-menu";
 import { ProductGrid } from "@/components/product-card";
+import { pharmacyJsonLd, pharmacyName, storeArea } from "@/lib/seo";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getSettings();
+  const name = pharmacyName(s.storeName);
+  const area = storeArea(s.address);
+  return {
+    // Nama "Apotek ..." + lokasi agar Google tidak tertukar dengan apotek bernama sama di kota lain
+    title: { absolute: `${name}${area ? ` ${area}` : ""} - ${s.tagline}` },
+    description: `${name}${area ? ` di ${area}` : ""}: ${s.tagline}. Jual injeksi, insulin, infus, alat kesehatan, multivitamin dan obat dengan pengiriman cepat & bisa COD.`,
+    alternates: { canonical: "/" },
+  };
+}
 
 function PromoBanner({ image, title, href }: { image: string; title: string; href: string }) {
   return (
@@ -35,8 +49,14 @@ export default async function HomePage() {
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(pharmacyJsonLd(settings, process.env.SITE_URL ?? "http://localhost:3000")).replace(/</g, "\\u003c"),
+        }}
+      />
       <h1 className="sr-only">
-        {settings.storeName} — {settings.tagline}
+        {pharmacyName(settings.storeName)} — {settings.tagline}
       </h1>
 
       <section className="container-page pt-10 md:pt-14">
