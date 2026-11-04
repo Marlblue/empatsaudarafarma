@@ -8,7 +8,7 @@ import { getProductBySlug, getRelatedProducts, isInStock } from "@/lib/catalog";
 import { formatDateTime, formatRupiah, waLink } from "@/lib/format";
 import { ADDRESS_REQUEST } from "@/lib/whatsapp";
 import { getSettings } from "@/lib/settings";
-import { productMetaDescription, productMetaTitle } from "@/lib/seo";
+import { breadcrumbJsonLd, productMetaDescription, productMetaTitle } from "@/lib/seo";
 import { AddToCartForm } from "@/components/add-to-cart";
 import { EnvelopeIcon, FacebookIcon, LinkedInIcon, PinterestIcon, TwitterIcon, WhatsAppIcon } from "@/components/icons";
 import { Price } from "@/components/price";
@@ -57,7 +57,8 @@ export default async function ProductPage({ params }: PageProps<"/produk/[slug]"
 
   const category = product.categories[0]?.category;
   const inStock = isInStock(product);
-  const productUrl = `${process.env.SITE_URL ?? "http://localhost:3000"}/produk/${product.slug}`;
+  const siteUrl = process.env.SITE_URL ?? "http://localhost:3000";
+  const productUrl = `${siteUrl}/produk/${product.slug}`;
   const avgRating = product.reviews.length
     ? product.reviews.reduce((n, r) => n + r.rating, 0) / product.reviews.length
     : 0;
@@ -107,13 +108,19 @@ export default async function ProductPage({ params }: PageProps<"/produk/[slug]"
     }),
   };
 
+  const breadcrumb = breadcrumbJsonLd([
+    { name: "Beranda", url: siteUrl },
+    ...(category ? [{ name: category.name, url: `${siteUrl}/kategori/${category.slug}` }] : []),
+    { name: product.name, url: productUrl },
+  ]);
+
   const circleBtn = "flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#ddd] text-[#bbb] hover:border-ink hover:bg-ink hover:text-white";
 
   return (
     <div className="container-page pb-4 pt-[30px] md:pt-10">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify([jsonLd, breadcrumb]).replace(/</g, "\\u003c") }}
       />
       {product.status === "DRAFT" && (
         <p className="mb-4 bg-amber-50 p-3 text-sm font-bold text-amber-800">
