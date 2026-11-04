@@ -4,7 +4,7 @@ import { getSettings } from "@/lib/settings";
 import { RichText } from "@/components/rich-text";
 import { ContactForm } from "../kontak/contact-form";
 
-export const metadata: Metadata = { title: "About Us" };
+export const metadata: Metadata = { title: "About Us", alternates: { canonical: "/tentang" } };
 
 function Section({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
   return (

@@ -40,8 +40,9 @@ Password akun disimpan dalam bentuk terenkripsi. Anda dapat menghubungi kami unt
 };
 
 export async function generateMetadata({ params }: PageProps<"/[info]">): Promise<Metadata> {
-  const page = PAGES[(await params).info];
-  return page ? { title: page.title } : {};
+  const { info } = await params;
+  const page = PAGES[info];
+  return page ? { title: page.title, alternates: { canonical: `/${info}` } } : {};
 }
 
 export default async function InfoPage({ params }: PageProps<"/[info]">) {
