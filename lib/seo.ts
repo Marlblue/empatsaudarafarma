@@ -1,4 +1,4 @@
-import { toWaNumber } from "@/lib/format";
+import { formatRupiah, toWaNumber } from "@/lib/format";
 import type { StoreSettings } from "@/lib/settings";
 import { PROVINCES } from "@/lib/shipping";
 
@@ -10,6 +10,41 @@ export function storeArea(address: string) {
 /** "Apotek Empat Saudara Farma" — hindari "Apotek Apotek ..." bila nama toko sudah diawali "Apotek" */
 export function pharmacyName(storeName: string) {
   return /^apote?k\b/i.test(storeName) ? storeName : `Apotek ${storeName}`;
+}
+
+/**
+ * Judul SEO fallback halaman produk saat metaTitle belum diisi admin. Pola:
+ * "<nama> <bentuk sediaan> – Harga & Jual Online | <nama apotek>".
+ *
+ * Tanpa ini judulnya hanya nama produk ("Lyoven"), sehingga tidak cocok dengan
+ * cara orang mencari di Google: "<obat> harga", "<obat> injeksi", dst. Bentuk
+ * sediaan diambil dari data yang memang ada (dosageForm) — bukan mengarang — dan
+ * hanya ditambahkan bila belum tersebut di nama, agar tidak jadi "Lyoven Injeksi
+ * Injeksi". metaTitle buatan admin tetap menang di atas ini.
+ */
+export function productMetaTitle(p: { name: string; dosageForm?: string | null }, storeName: string) {
+  const bentuk = p.dosageForm?.trim();
+  const inti = bentuk && !p.name.toLowerCase().includes(bentuk.toLowerCase()) ? `${p.name} ${bentuk}` : p.name;
+  return `${inti} – Harga & Jual Online | ${pharmacyName(storeName)}`;
+}
+
+/**
+ * Deskripsi SEO fallback saat metaDescription dan shortDescription sama-sama
+ * kosong. Mengangkat komposisi — yang sering dicari ("<obat> komposisi") — dan
+ * harga langsung dari data produk, plus nama apotek dan kota. Semua nilainya
+ * nyata (bukan klaim medis), jadi aman untuk situs apotek.
+ */
+export function productMetaDescription(
+  p: { name: string; activeIngredient?: string | null; price: number },
+  s: Pick<StoreSettings, "storeName" | "address">,
+) {
+  const area = storeArea(s.address);
+  const komposisi = p.activeIngredient?.trim();
+  return (
+    `Jual ${p.name} di ${pharmacyName(s.storeName)}${area ? ` ${area}` : ""}. ` +
+    `${komposisi ? `Komposisi ${komposisi}. ` : ""}` +
+    `Harga ${formatRupiah(p.price)}. Pesan online atau via WhatsApp.`
+  );
 }
 
 const DAYS: Record<string, string> = {

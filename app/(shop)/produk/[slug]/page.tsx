@@ -8,6 +8,7 @@ import { getProductBySlug, getRelatedProducts, isInStock } from "@/lib/catalog";
 import { formatDateTime, formatRupiah, waLink } from "@/lib/format";
 import { ADDRESS_REQUEST } from "@/lib/whatsapp";
 import { getSettings } from "@/lib/settings";
+import { productMetaDescription, productMetaTitle } from "@/lib/seo";
 import { AddToCartForm } from "@/components/add-to-cart";
 import { EnvelopeIcon, FacebookIcon, LinkedInIcon, PinterestIcon, TwitterIcon, WhatsAppIcon } from "@/components/icons";
 import { Price } from "@/components/price";
@@ -21,10 +22,11 @@ const getProduct = cache(getProductBySlug);
 export async function generateMetadata({ params }: PageProps<"/produk/[slug]">): Promise<Metadata> {
   const product = await getProduct((await params).slug);
   if (!product) return {};
+  const settings = await getSettings();
   const description =
-    product.metaDescription ?? product.shortDescription ?? `Beli ${product.name} harga ${formatRupiah(product.price)}.`;
+    product.metaDescription ?? product.shortDescription ?? productMetaDescription(product, settings);
   return {
-    title: product.metaTitle ?? product.name,
+    title: product.metaTitle ?? productMetaTitle(product, settings.storeName),
     description,
     alternates: { canonical: `/produk/${product.slug}` },
     openGraph: { title: product.name, description, images: product.images[0] ? [product.images[0].url] : [] },
