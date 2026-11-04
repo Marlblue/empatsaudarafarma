@@ -47,6 +47,34 @@ export function productMetaDescription(
   );
 }
 
+/**
+ * Judul SEO fallback halaman kategori saat kategori tidak punya judul khusus.
+ * Tanpa ini judulnya hanya nama kategori ("Albumin"); pola ini menangkap pola
+ * pencarian "jual <kategori>" dan menautkan nama apotek.
+ */
+export function categoryMetaTitle(name: string, storeName: string) {
+  return `Jual ${name} Online | ${pharmacyName(storeName)}`;
+}
+
+/** Deskripsi SEO fallback halaman kategori saat category.description kosong. */
+export function categoryMetaDescription(name: string, s: Pick<StoreSettings, "storeName" | "address">) {
+  const area = storeArea(s.address);
+  return `Jual berbagai ${name} asli di ${pharmacyName(s.storeName)}${area ? ` ${area}` : ""}. Harga bersaing, pesan online atau via WhatsApp.`;
+}
+
+/**
+ * Data terstruktur BreadcrumbList schema.org. Google memakainya untuk menampilkan
+ * jejak navigasi (Beranda › Kategori › Produk) di hasil pencarian, bukan URL polos —
+ * memperjelas konteks halaman dan menaikkan CTR. `items` urut dari akar ke halaman ini.
+ */
+export function breadcrumbJsonLd(items: { name: string; url: string }[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((it, i) => ({ "@type": "ListItem", position: i + 1, name: it.name, item: it.url })),
+  };
+}
+
 const DAYS: Record<string, string> = {
   senin: "Monday",
   selasa: "Tuesday",
